@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-from pytorch_pretrained_bert import GPT2Tokenizer
+from transformers import GPT2Tokenizer
 from tqdm import tqdm
 
 from bwgpt2.workspace import UUID_RESOLVE_FILENAME, CHAT_LOG_FILENAME

@@ -5,7 +5,7 @@ import math
 import random
 import time
 
-from pytorch_pretrained_bert import GPT2Tokenizer, GPT2LMHeadModel, BertAdam
+from transformers import GPT2Tokenizer, GPT2LMHeadModel, AdamW, get_linear_schedule_with_warmup
 from torch.distributions.categorical import Categorical
 import torch
 import torch.nn as nn
@@ -158,10 +158,11 @@ def main():
         {'params': [p for n, p in params if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
     num_train_optimization_steps = args.num_train_epochs * len(train_loader)
-    optimizer = BertAdam(optimizer_grouped_parameters,
-                         lr=args.learning_rate,
-                         warmup=args.warmup_proportion,
-                         t_total=num_train_optimization_steps)
+    optimizer = AdamW(optimizer_grouped_parameters,
+                      lr=args.learning_rate)
+    t_total = len(train_loader) * args.num_train_epochs
+    num_warmup_steps = args.warmup_proportion * t_total
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=t_total)
 
     if args.resume:
         model.load_state_dict(torch.load(args.resume, map_location=lambda s, l: s))
@@ -206,6 +207,7 @@ def main():
             loss = raw_loss
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             total_loss += raw_loss.item() * mask_tot.item()
             total_n += total_chars
