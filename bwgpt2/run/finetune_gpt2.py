@@ -27,6 +27,7 @@ ARGS = [
     OptionEnum.SEED.value.default(0),
     OptionEnum.WARMUP_PROPORTION.value.default(0.1),
     opt('--data-folder', type=str, required=True),
+    opt('--use-warmup', action='store_true'),
     opt('--weight-decay', type=float, default=1e-3),
     opt('--log-interval', type=int, default=100),
     opt('--save', type=str, default='gpt2.pt'),
@@ -160,9 +161,10 @@ def main():
     num_train_optimization_steps = args.num_train_epochs * len(train_loader)
     optimizer = AdamW(optimizer_grouped_parameters,
                       lr=args.learning_rate)
-    t_total = len(train_loader) * args.num_train_epochs
-    num_warmup_steps = args.warmup_proportion * t_total
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=t_total)
+    if args.use_warmup:
+        t_total = len(train_loader) * args.num_train_epochs
+        num_warmup_steps = args.warmup_proportion * t_total
+        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=t_total)
 
     if args.resume:
         model.load_state_dict(torch.load(args.resume, map_location=lambda s, l: s))
@@ -207,7 +209,7 @@ def main():
             loss = raw_loss
             loss.backward()
             optimizer.step()
-            scheduler.step()
+            if args.use_warmup: scheduler.step()
 
             total_loss += raw_loss.item() * mask_tot.item()
             total_n += total_chars
